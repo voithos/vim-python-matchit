@@ -3,7 +3,7 @@
 " Last Change:	Thu 02 Oct 2003 12:12:20 PM EDT
 " Maintainer:   Benji Fisher, Ph.D. <benji@member.AMS.org>
 " Version:	0.5, for Vim 6.1
-" URL:		http://www.vim.org/scripts/script.php?script_id=386 
+" URL:		http://www.vim.org/scripts/script.php?script_id=386
 
 " allow user to prevent loading and prevent duplicate loading
 if exists("b:loaded_py_match") || &cp
@@ -43,7 +43,7 @@ let s:loaded_functions = 1
 " keywords that start a block:
 let s:ini1 = 'try\|if'
 " These are special, because the matching words may not have the same indent:
-let s:ini2 = 'for\|while' 
+let s:ini2 = 'for\|while'
 " keywords that continue or end a block:
 let s:tail1 = 'except\|finally'
 let s:tail1 = s:tail1 . '\|elif\|else'
@@ -128,7 +128,7 @@ fun! s:PyMatch(type, mode) range
       " There are no "tail1" keywords below startline in this block.  Go to
       " the start of the block.
       let next = (text =~ '^\s*\%(' . s:ini1 . '\)') ?
-	    \ currline : s:StartOfBlock(currline) 
+	    \ currline : s:StartOfBlock(currline)
     endif
     execute next
     return s:CleanUp('', a:mode, '$')
