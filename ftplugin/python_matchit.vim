@@ -147,7 +147,25 @@ fun! s:PyMatch(type, mode) range
     return s:CleanUp('', a:mode, '$')
   endif
 
-  " Sure "for" or "while" group case for "%' and 'g%'
+  " Sure "if" or "try" group case for 'g%'
+  " If called as g%, look up for "if" or "elif" or "else" or down for any.
+  if a:type == 'g%' && text =~ '^\s*\%('. s:all1x .'\)'
+    " If we started at the top of the block, go down to the end of the block.
+    if text =~ '^\s*\(' . s:ini1 . '\)'
+      let next = s:EndOfBlock(currline)
+    else
+      let next = s:NonComment(-1, currline)
+    endif
+    while next > 0 && indent(next) > startindent
+      let next = s:NonComment(-1, next)
+    endwhile
+    if indent(next) == startindent && getline(next) =~ '^\s*\%('.s:all1.'\)'
+      execute next
+    endif
+    return s:CleanUp('', a:mode, '$')
+  endif
+
+  " Sure "for" or "while" group case for "%'
   " If called as %, look down for "break" or "continue" or up for
   " "for" or "while".
   if a:type == '%' && text =~ '^\s*\%(' . s:all2x . '\)'
@@ -168,25 +186,7 @@ fun! s:PyMatch(type, mode) range
     return s:CleanUp('', a:mode, '$')
   endif
 
-  " Sure "if" or "try" group case for 'g%'
-  " If called as g%, look up for "if" or "elif" or "else" or down for any.
-  if a:type == 'g%' && text =~ '^\s*\%('. s:all1x .'\)'
-    " If we started at the top of the block, go down to the end of the block.
-    if text =~ '^\s*\(' . s:ini1 . '\)'
-      let next = s:EndOfBlock(currline)
-    else
-      let next = s:NonComment(-1, currline)
-    endif
-    while next > 0 && indent(next) > startindent
-      let next = s:NonComment(-1, next)
-    endwhile
-    if indent(next) == startindent && getline(next) =~ '^\s*\%('.s:all1.'\)'
-      execute next
-    endif
-    return s:CleanUp('', a:mode, '$')
-  endif
-
-  " Sure "for" or "while" group case for "%' and 'g%'
+  " Sure "for" or "while" group case for 'g%'
   " If called as g%, look up for "for" or "while" or down for any.
   if a:type == 'g%' && text =~ '^\s*\%(' . s:all2x . '\)'
     " Start at topline .  If we started on a "for" or "while" then topline is
@@ -264,7 +264,7 @@ fun! s:StartOfBlock(start)
   while prevline > 0
     if indent(prevline) < startindent ||
 	  \ tailflag && indent(prevline) == startindent &&
-	  \ getline(prevline) =~ '^\s*\(' . s:ini1 . '\)'
+	  \ getline(prevline) =~ '^\s*\(' . s:ini1 . '\|' . s:ini2 . '\)'
       " Found the start of block!
       return prevline
     endif
