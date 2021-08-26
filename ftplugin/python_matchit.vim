@@ -46,11 +46,15 @@ let s:ini1 = 'try\|if'
 let s:ini2 = 'for\|while'
 " keywords that continue or end a block:
 let s:tail1 = 'except\|finally'
+let s:tail1x = s:tail1 . '\|elif'
 let s:tail1 = s:tail1 . '\|elif\|else'
 " These go with s:ini2 :
-let s:tail2 = 'break\|continue'
+let s:tail2x = 'break\|continue'
+let s:tail2 = 'break\|continue\|else'
 " all keywords:
+let s:all1x = s:ini1 . '\|' . s:tail1x
 let s:all1 = s:ini1 . '\|' . s:tail1
+let s:all2x = s:ini2 . '\|' . s:tail2x
 let s:all2 = s:ini2 . '\|' . s:tail2
 
 fun! s:PyMatch(type, mode) range
@@ -96,15 +100,15 @@ fun! s:PyMatch(type, mode) range
   if a:type == '%' || a:type == 'g%'
     let text = getline(currline)
     if strpart(text, 0, col(".")) =~ '\S\s'
-      \ || text !~ '^\s*\%(' . s:all1 . '\|' . s:all2 . '\)'
+      \ || text !~ '^\s*\%(' . s:all1 . '\|' . s:all2x . '\)'
       " cursor not on the first WORD or no keyword so bail out
       if a:type == '%'
 	normal! %
       endif
       return s:CleanUp('', a:mode)
     endif
-    " If it matches s:all2, we need to find the "for" or "while".
-    if text =~ '^\s*\%(' . s:all2 . '\)'
+    " If it matches s:all2x, we need to find the "for" or "while".
+    if text =~ '^\s*\%(' . s:all2x . '\)'
       let topline = currline
       while getline(topline) !~ '^\s*\%(' . s:ini2 . '\)'
 	let temp = s:StartOfBlock(topline)
@@ -136,17 +140,17 @@ fun! s:PyMatch(type, mode) range
 
   " If called as %, look down for "break" or "continue" or up for
   " "for" or "while".
-  if a:type == '%' && text =~ '^\s*\%(' . s:all2 . '\)'
+  if a:type == '%' && text =~ '^\s*\%(' . s:all2x . '\)'
     let next = s:NonComment(+1, currline)
     while next > 0 && indent(next) > topindent
-	  \ && getline(next) !~ '^\s*\%(' . s:tail2 . '\)'
+	  \ && getline(next) !~ '^\s*\%(' . s:tail2x . '\)'
       " Skip over nested "for" or "while" blocks:
       if getline(next) =~ '^\s*\%(' . s:ini2 . '\)'
 	let next = s:EndOfBlock(next)
       endif
       let next = s:NonComment(+1, next)
     endwhile
-    if indent(next) > topindent && getline(next) =~ '^\s*\%(' . s:tail2 . '\)'
+    if indent(next) > topindent && getline(next) =~ '^\s*\%(' . s:tail2x . '\)'
       execute next
     else " There are no "tail2" keywords below v:startline, so go to topline.
       execute topline
@@ -172,7 +176,7 @@ fun! s:PyMatch(type, mode) range
   endif
 
   " If called as g%, look up for "for" or "while" or down for any.
-  if a:type == 'g%' && text =~ '^\s*\%(' . s:all2 . '\)'
+  if a:type == 'g%' && text =~ '^\s*\%(' . s:all2x . '\)'
     " Start at topline .  If we started on a "for" or "while" then topline is
     " the same as currline, and we want the last "break" or "continue" in the
     " block.  Otherwise, we want the last one before currline.
@@ -180,7 +184,7 @@ fun! s:PyMatch(type, mode) range
     let currline = topline
     let next = s:NonComment(+1, currline)
     while next < botline && indent(next) > topindent
-      if getline(next) =~ '^\s*\%(' . s:tail2 . '\)'
+      if getline(next) =~ '^\s*\%(' . s:tail2x . '\)'
 	let currline = next
       elseif getline(next) =~ '^\s*\%(' . s:ini2 . '\)'
 	" Skip over nested "for" or "while" blocks:
