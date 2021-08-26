@@ -1,8 +1,9 @@
 " Python filetype plugin for matching with % key
 " Language:     Python (ft=python)
-" Last Change:	Thu 02 Oct 2003 12:12:20 PM EDT
-" Maintainer:   Benji Fisher, Ph.D. <benji@member.AMS.org>
-" Version:	0.5, for Vim 6.1
+" Last Change:	Thu 26 Aug 2021 02:46:38 PM UTC
+" Maintainer:   Osamu Aoki <osamu@debian.org>
+" Original Author/Maintainer:   Benji Fisher, Ph.D. <benji@member.AMS.org>
+" Version:	0.5.1, for Vim 8.2
 " URL:		http://www.vim.org/scripts/script.php?script_id=386
 
 " allow user to prevent loading and prevent duplicate loading
@@ -40,11 +41,16 @@ let s:loaded_functions = 1
 " line, if they have the same indent.
 "
 " Recognize try, except, finally and if, elif, else .
+"
+" One annoying thing is else is used not only with if/try but also with
+" for/while.  This 2021 modification address this.
+"
 " keywords that start a block:
 let s:ini1 = 'try\|if'
 " These are special, because the matching words may not have the same indent:
 let s:ini2 = 'for\|while'
 " keywords that continue or end a block:
+let s:tailx = 'else'
 let s:tail1 = 'except\|finally'
 let s:tail1x = s:tail1 . '\|elif'
 let s:tail1 = s:tail1 . '\|elif\|else'
@@ -99,6 +105,7 @@ fun! s:PyMatch(type, mode) range
   " If called as % or g%, decide whether to bail out.
   if a:type == '%' || a:type == 'g%'
     let text = getline(currline)
+    " Non-python case for '%' and 'g%'
     if strpart(text, 0, col(".")) =~ '\S\s'
       \ || text !~ '^\s*\%(' . s:all1 . '\|' . s:all2x . '\)'
       " cursor not on the first WORD or no keyword so bail out
@@ -107,6 +114,7 @@ fun! s:PyMatch(type, mode) range
       endif
       return s:CleanUp('', a:mode)
     endif
+    " Sure "for" or "while" group case for "%' and 'g%'
     " If it matches s:all2x, we need to find the "for" or "while".
     if text =~ '^\s*\%(' . s:all2x . '\)'
       let topline = currline
@@ -121,8 +129,9 @@ fun! s:PyMatch(type, mode) range
     endif
   endif
 
+  " Sure "if" or "try" group case for '%'
   " If called as %, look down for "elif" or "else" or up for "if".
-  if a:type == '%' && text =~ '^\s*\%('. s:all1 .'\)'
+  if a:type == '%' && text =~ '^\s*\%('. s:all1x .'\)'
     let next = s:NonComment(+1, currline)
     while next > 0 && indent(next) > startindent
       let next = s:NonComment(+1, next)
@@ -138,6 +147,7 @@ fun! s:PyMatch(type, mode) range
     return s:CleanUp('', a:mode, '$')
   endif
 
+  " Sure "for" or "while" group case for "%' and 'g%'
   " If called as %, look down for "break" or "continue" or up for
   " "for" or "while".
   if a:type == '%' && text =~ '^\s*\%(' . s:all2x . '\)'
@@ -158,8 +168,9 @@ fun! s:PyMatch(type, mode) range
     return s:CleanUp('', a:mode, '$')
   endif
 
+  " Sure "if" or "try" group case for 'g%'
   " If called as g%, look up for "if" or "elif" or "else" or down for any.
-  if a:type == 'g%' && text =~ '^\s*\%('. s:all1 .'\)'
+  if a:type == 'g%' && text =~ '^\s*\%('. s:all1x .'\)'
     " If we started at the top of the block, go down to the end of the block.
     if text =~ '^\s*\(' . s:ini1 . '\)'
       let next = s:EndOfBlock(currline)
@@ -175,6 +186,7 @@ fun! s:PyMatch(type, mode) range
     return s:CleanUp('', a:mode, '$')
   endif
 
+  " Sure "for" or "while" group case for "%' and 'g%'
   " If called as g%, look up for "for" or "while" or down for any.
   if a:type == 'g%' && text =~ '^\s*\%(' . s:all2x . '\)'
     " Start at topline .  If we started on a "for" or "while" then topline is
@@ -193,6 +205,30 @@ fun! s:PyMatch(type, mode) range
       let next = s:NonComment(+1, next)
     endwhile
     execute currline
+    return s:CleanUp('', a:mode, '$')
+  endif
+
+  " Sure "else" group case for '%'
+  " If called as %, look up for "if" "try" "while" "for".
+  if a:type == '%' && text =~ '^\s*\%('. s:tailx .'\)'
+    let next = s:NonComment(+1, currline)
+    " Go to the start of the block.
+    let next = (text =~ '^\s*\%(' . s:ini1 . '\|' . s:ini2 . '\)') ?
+          \ currline : s:StartOfBlock(currline)
+    execute next
+    return s:CleanUp('', a:mode, '$')
+  endif
+
+  " Sure "else" group case for 'g%'
+  " If called as g%, look up for "if" or "elif" or "try" "while" "for".
+  if a:type == 'g%' && text =~ '^\s*\%('. s:tailx .'\)'
+    let next = s:NonComment(-1, currline)
+    while next > 0 && indent(next) > startindent
+      let next = s:NonComment(-1, next)
+    endwhile
+    if indent(next) == startindent && getline(next) =~ '^\s*\%(' . s:all1x . '\|' . s:ini2 '\)'
+      execute next
+    endif
     return s:CleanUp('', a:mode, '$')
   endif
 
