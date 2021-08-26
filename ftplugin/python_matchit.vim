@@ -166,7 +166,7 @@ fun! s:PyMatch(type, mode) range
   endif
 
   " Sure "for" or "while" group case for "%'
-  " If called as %, look down for "break" or "continue" or up for
+  " If called as %, look down for "break" or "continue" or "else" or up for
   " "for" or "while".
   if a:type == '%' && text =~ '^\s*\%(' . s:all2x . '\)'
     let next = s:NonComment(+1, currline)
@@ -179,6 +179,8 @@ fun! s:PyMatch(type, mode) range
       let next = s:NonComment(+1, next)
     endwhile
     if indent(next) > topindent && getline(next) =~ '^\s*\%(' . s:tail2x . '\)'
+      execute next
+    elseif indent(next) == topindent && getline(next) =~ '^\s*\%(' . s:tailx . '\)'
       execute next
     else " There are no "tail2" keywords below v:startline, so go to topline.
       execute topline
